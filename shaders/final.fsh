@@ -4,11 +4,9 @@ varying vec4 texcoord;
 varying vec3 ambient_color;
 varying vec3 sunlight;
 varying vec3 moonlight;
-
 varying vec3 sunVec;
 varying vec3 moonVec;
 varying vec3 upVec;
-
 varying float SdotU;
 varying float MdotU;
 varying float sunVisibility;
@@ -16,7 +14,6 @@ varying float moonVisibility;
 
 uniform sampler2D noisetex;
 uniform sampler2D gcolor;
-uniform sampler2D gaux4;
 uniform int isEyeInWater;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
@@ -41,9 +38,6 @@ vec3 convertToHDR(in vec3 color){
 
 	vec3 OEcolor;
 	vec3 UEcolor;
-
-	//UEcolor = color * 0.5f;
-	//OEcolor = color * 1.2f;
 
 	if (isEyeInWater == 1){
 		UEcolor = color * RainPowerColorAmp() * 0.4f;
@@ -98,8 +92,11 @@ vec3 underwaterDarkening(float depth, vec3 color) {
 }
 
 
+//-----------------------------------------------------
+//----------------------VOID MAIN----------------------
+//-----------------------------------------------------
+
 void main() {
-  //vec3 color = texture2D(gcolor, texcoord.st).rgb;
 
 	vec2 newTexcoord = underwaterRefraction(texcoord.xy);
 
@@ -110,8 +107,6 @@ void main() {
        fragposition /= fragposition.w;
 
 	vec3 fragpos = vec3(newTexcoord.st, texture2D(depthtex0, newTexcoord.st).r);
-
-  //vec3 fragpos = vec3(texcoord.st, texture2D(depthtex0, texcoord.st).r);
 
 	color.rgb = doFogBlur(color.rgb, fragposition.xyz, newTexcoord);
 
