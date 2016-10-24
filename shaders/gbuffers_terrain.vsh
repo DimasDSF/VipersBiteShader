@@ -5,7 +5,7 @@
 #define WAVING_GRASS
 #define WAVING_WEB
 #define WAVING_NETHERWART
-#define WAVING_WHEAT
+#define WAVING_CROPS
 #define WAVING_FLOWERS
 #define WAVING_FIRE
 #define WAVING_WATER
@@ -13,30 +13,32 @@
 #define WAVING_LILYPAD
 #define INTENSE_GLOW
 
-#define ENTITY_LEAVES        18.0
-#define ENTITY_LEAVES_2      161.0
-#define ENTITY_VINES        106.0
-#define ENTITY_TALLGRASS     31.0
-#define ENTITY_DEAD_BUSH 	 32.0
-#define ENTITY_SAPLING		 6.0
-#define ENTITY_DANDELION     37.0
-#define ENTITY_ROSE          38.0
+#define ENTITY_LEAVES		18.0
+#define ENTITY_LEAVES_2		161.0
+#define ENTITY_VINES		106.0
+#define ENTITY_TALLGRASS	31.0
+#define ENTITY_DEAD_BUSH	32.0
+#define ENTITY_SAPLING		6.0
+#define ENTITY_DANDELION	37.0
+#define ENTITY_ROSE			38.0
 #define ENTITY_FLOWERS		175.0
-#define ENTITY_NETHERWART 115.0
-#define ENTITY_CARROT 		141.0
-#define ENTITY_POTATO 		142.0
-#define ENTITY_BEET 		207.0
-#define ENTITY_WHEAT         59.0
-#define ENTITY_LILYPAD      111.0
-#define ENTITY_WEB          30.0
-#define ENTITY_FIRE          51.0
-#define ENTITY_WATERFLOWING   8.0
-#define ENTITY_WATERSTILL     9.0
-#define ENTITY_LAVAFLOWING   10.0
-#define ENTITY_LAVASTILL     11.0
-#define ENTITY_GLOWSTONE     89.0
-#define ENTITY_GLOWSTONE_LAMP 124.0
-#define ENTITY_TORCH          50.0
+#define ENTITY_NETHERWART	115.0
+#define ENTITY_CARROT		141.0
+#define ENTITY_POTATO		142.0
+#define ENTITY_BEET			207.0
+#define ENTITY_WHEAT		59.0
+#define ENTITY_LILYPAD		111.0
+#define ENTITY_WEB			30.0
+#define ENTITY_FIRE			51.0
+#define ENTITY_WATERFLOWING	8.0
+#define ENTITY_WATERSTILL	9.0
+#define ENTITY_LAVAFLOWING	10.0
+#define ENTITY_LAVASTILL	11.0
+#define ENTITY_GLOWSTONE	89.0
+#define ENTITY_GLOWLAMP		124.0
+#define ENTITY_TORCH		50.0
+#define ENTITY_PORTAL		90.0
+#define ENTITY_BEACON		138.0
 
 const float PI = 3.1415927;
 
@@ -117,80 +119,111 @@ vec3 calcLavaMove(in vec3 pos)
 void main() {
 	vec4 vtexcoordam;
 	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
-	vec2 midcoord = (gl_TextureMatrix[0] *  mc_midTexCoord).st;
+	vec2 midcoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
 	vec2 texcoordminusmid = texcoord-midcoord;
 	vtexcoordam.pq  = abs(texcoordminusmid)*2;
 	vtexcoordam.st  = min(texcoord,midcoord-texcoordminusmid);
 	vec2 vtexcoord    = sign(texcoordminusmid)*0.5+0.5;
 	mat = 1.0f;
-  glowmult = 1.0f;
+	glowmult = 1.0f;
 	float istopv = 0.0;
 	if (gl_MultiTexCoord0.t < mc_midTexCoord.t) istopv = 1.0;
 	vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
 	vec3 worldpos = position.xyz + cameraPosition;
 
-	#ifdef WAVING_LEAVES
-	if ( mc_Entity.x == ENTITY_LEAVES || mc_Entity.x == ENTITY_LEAVES_2 )
+	#ifdef WAVING_LEAVES	
+	if ( mc_Entity.x == ENTITY_LEAVES || mc_Entity.x == ENTITY_LEAVES_2 ){
 			position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,1.0), vec3(0.5,0.1,0.5));
+			}
 	#endif
 	#ifdef WAVING_VINES
 	if ( mc_Entity.x == ENTITY_VINES )
 			position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,1.0), vec3(0.5,0.1,0.5));
 	#endif
-	if (istopv > 0.9) {
-	#ifdef WAVING_GRASS
-	if ( mc_Entity.x == ENTITY_TALLGRASS)
-			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
-	#endif
-
 	#ifdef WAVING_FLOWERS
-	if (mc_Entity.x == ENTITY_DANDELION || mc_Entity.x == ENTITY_ROSE || mc_Entity.x == ENTITY_FLOWERS || mc_Entity.x == ENTITY_DEAD_BUSH)
-			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.005, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+	if ( mc_Entity.x == ENTITY_FLOWERS )
+		if (mc_Entity.z == 0.0 || mc_Entity.z == 2.0 || mc_Entity.z == 1.0 || mc_Entity.z == 3.0 || mc_Entity.z == 4.0 || mc_Entity.z == 5.0) {
+			if (istopv < 0.5) {
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.0,0.0,0.0), vec3(0.0,0.0,0.0));
+			}
+			else {
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+			}
+		}
+		else {
+			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		}
 	#endif
-	#ifdef WAVING_WHEAT
-	if ( mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == ENTITY_CARROT || mc_Entity.x == ENTITY_POTATO ||  mc_Entity.x == ENTITY_BEET)
-			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
-	#endif
-  #ifdef WAVING_NETHERWART
-	if ( mc_Entity.x == ENTITY_NETHERWART)
-			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
-	#endif
-	#ifdef WAVING_FIRE
-	if ( mc_Entity.x == ENTITY_FIRE)
-      position.xyz += calcMove(worldpos.xyz, 0.0105, 0.0096, 0.0087, 0.0063, 0.0097, 0.0156, vec3(1.2,0.4,1.2), vec3(0.8,0.8,0.8));
-  #endif
+	if (istopv > 0.9) {
+		#ifdef WAVING_GRASS
+		if ( mc_Entity.x == ENTITY_TALLGRASS)
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		#endif
+		#ifdef WAVING_FLOWERS
+		if (mc_Entity.x == ENTITY_DANDELION || mc_Entity.x == ENTITY_ROSE || mc_Entity.x == ENTITY_DEAD_BUSH || mc_Entity.x == ENTITY_SAPLING)
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.005, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		#endif
+		#ifdef WAVING_CROPS
+		if ( mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == ENTITY_CARROT || mc_Entity.x == ENTITY_POTATO ||  mc_Entity.x == ENTITY_BEET)
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		#endif
+		#ifdef WAVING_NETHERWART
+		if ( mc_Entity.x == ENTITY_NETHERWART)
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		#endif
+		#ifdef WAVING_FIRE
+		if ( mc_Entity.x == ENTITY_FIRE)
+				position.xyz += calcMove(worldpos.xyz, 0.0105, 0.0096, 0.0087, 0.0063, 0.0097, 0.0156, vec3(1.2,0.4,1.2), vec3(0.8,0.8,0.8));
+		#endif
 	}
 	#ifdef WAVING_LAVA
 	if ( mc_Entity.x == ENTITY_LAVAFLOWING || mc_Entity.x == ENTITY_LAVASTILL) {
 			position.xyz += calcLavaMove(worldpos.xyz) * 0.25;
-			}
+	}
 	#endif
 	#ifdef WAVING_WATER
 	if ( mc_Entity.x == ENTITY_WATERFLOWING || mc_Entity.x == ENTITY_WATERSTILL) {
 			position.xyz += calcWaterMove(worldpos.xyz) * 0.25;
-			}
+	}
 	#endif
-  #ifdef WAVING_WEB
+	#ifdef WAVING_WEB
 	if ( mc_Entity.x == ENTITY_WEB ) {
 			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.2,0.0,0.2), vec3(0.2,0.0,0.2));
-			}
+	}
 	#endif
 	#ifdef WAVING_LILYPAD
 	if ( mc_Entity.x == ENTITY_LILYPAD ) {
 			position.xyz += calcMove(worldpos.xyz, 0.0021, 0.0035, 0.0022, 0.0016, 0.0120, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
-			}
-	#endif
-  #ifdef INTENSE_GLOW
-  if ( mc_Entity.x == ENTITY_GLOWSTONE || mc_Entity.x == ENTITY_GLOWSTONE_LAMP || mc_Entity.x == ENTITY_FIRE || mc_Entity.x == ENTITY_LAVAFLOWING || mc_Entity.x == ENTITY_LAVASTILL){
-    glowmult = 2.0f;
-  }
-  #endif
-	float translucent = 1.0;
-		if (mc_Entity.x == ENTITY_LEAVES || mc_Entity.x == ENTITY_VINES || mc_Entity.x == ENTITY_TALLGRASS || mc_Entity.x == ENTITY_DANDELION || mc_Entity.x == ENTITY_ROSE || mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == 30.0
-	|| mc_Entity.x == 175.0	|| mc_Entity.x == 115.0 || mc_Entity.x == 32.0) {
-	mat = 0.2;
-	translucent = 0.5;
 	}
+	#endif
+	#ifdef INTENSE_GLOW
+	if ( mc_Entity.x == ENTITY_GLOWSTONE ){
+		glowmult = 2.0f;
+	}
+	else if( mc_Entity.x == ENTITY_GLOWLAMP ){
+		glowmult = 2.0f;
+	}
+	else if( mc_Entity.x == ENTITY_FIRE ){
+		glowmult = 2.0f;
+	}
+	else if( mc_Entity.x == ENTITY_LAVAFLOWING ){
+		glowmult = 2.5f;
+	}
+	else if( mc_Entity.x == ENTITY_LAVASTILL ){
+		glowmult = 2.5f;
+	}
+	else if( mc_Entity.x == ENTITY_PORTAL ){
+		glowmult = 0.9f;
+	}
+	else if( mc_Entity.x == ENTITY_BEACON ){
+		glowmult = 1.2f;
+	}
+	#endif
+	float translucent = 1.0;
+		if (mc_Entity.x == ENTITY_LEAVES || mc_Entity.x == ENTITY_LEAVES_2 || mc_Entity.x == ENTITY_VINES || mc_Entity.x == ENTITY_TALLGRASS || mc_Entity.x == ENTITY_DANDELION || mc_Entity.x == ENTITY_ROSE || mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == ENTITY_BEET || mc_Entity.x == ENTITY_CARROT || mc_Entity.x == ENTITY_POTATO || mc_Entity.x == ENTITY_WEB || mc_Entity.x == ENTITY_FLOWERS || mc_Entity.x == ENTITY_NETHERWART || mc_Entity.x == ENTITY_DEAD_BUSH) {
+			mat = 0.2;
+			translucent = 0.5;
+		}
 	gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 
 	color = gl_Color;
