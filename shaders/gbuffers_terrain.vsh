@@ -26,6 +26,9 @@
 #define ENTITY_CARROT		141.0
 #define ENTITY_POTATO		142.0
 #define ENTITY_BEET			207.0
+#define ENTITY_PUMPKIN_ROOT	104.0
+#define ENTITY_MELON_ROOT	105.0
+#define ENTITY_SUGARCANE	83.0
 #define ENTITY_WHEAT		59.0
 #define ENTITY_LILYPAD		111.0
 #define ENTITY_WEB			30.0
@@ -141,7 +144,7 @@ void main() {
 			position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,1.0), vec3(0.5,0.1,0.5));
 	#endif
 	#ifdef WAVING_FLOWERS
-	if ( mc_Entity.x == ENTITY_FLOWERS )
+	if ( mc_Entity.x == ENTITY_FLOWERS)
 		if (mc_Entity.z == 0.0 || mc_Entity.z == 2.0 || mc_Entity.z == 1.0 || mc_Entity.z == 3.0 || mc_Entity.z == 4.0 || mc_Entity.z == 5.0) {
 			if (istopv < 0.5) {
 				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.0,0.0,0.0), vec3(0.0,0.0,0.0));
@@ -154,6 +157,16 @@ void main() {
 			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
 		}
 	#endif
+	#ifdef WAVING_CROPS
+	if ( mc_Entity.x == ENTITY_MELON_ROOT || mc_Entity.x == ENTITY_PUMPKIN_ROOT ){
+		if ( istopv < 0.1 ){
+			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.0,0.0,0.0), vec3(0.0,0.0,0.0));
+		}
+		else {
+			position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.4,0.0,0.4), vec3(0.4,0.0,0.4));
+		}
+	}
+	#endif
 	if (istopv > 0.9) {
 		#ifdef WAVING_GRASS
 		if ( mc_Entity.x == ENTITY_TALLGRASS)
@@ -164,7 +177,7 @@ void main() {
 				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.005, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
 		#endif
 		#ifdef WAVING_CROPS
-		if ( mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == ENTITY_CARROT || mc_Entity.x == ENTITY_POTATO ||  mc_Entity.x == ENTITY_BEET)
+		if ( mc_Entity.x == ENTITY_WHEAT || mc_Entity.x == ENTITY_CARROT || mc_Entity.x == ENTITY_POTATO ||  mc_Entity.x == ENTITY_BEET )
 				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0240, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
 		#endif
 		#ifdef WAVING_NETHERWART
