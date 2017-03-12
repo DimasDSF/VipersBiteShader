@@ -1,5 +1,7 @@
 #version 120
 
+#define HDR_ON
+
 varying vec4 texcoord;
 varying vec3 ambient_color;
 varying vec3 sunlight;
@@ -38,7 +40,7 @@ vec3 convertToHDR(in vec3 color){
 
 	vec3 OEcolor;
 	vec3 UEcolor;
-
+	
 	if (isEyeInWater == 1){
 		UEcolor = color * RainPowerColorAmp() * 0.4f;
 		OEcolor = color * RainPowerColorAmp() * 1.1f;
@@ -48,8 +50,11 @@ vec3 convertToHDR(in vec3 color){
 		OEcolor = color * RainPowerColorAmp() * 1.2f;
 	}
 
-
-  colorHDR = mix(UEcolor, OEcolor, color);
+	#ifndef HDR_ON
+	colorHDR = color * RainPowerColorAmp();
+	#else
+	colorHDR = mix(UEcolor, OEcolor, color);
+	#endif
 
   return colorHDR;
 }

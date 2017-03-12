@@ -42,6 +42,7 @@
 #define ENTITY_TORCH		50.0
 #define ENTITY_PORTAL		90.0
 #define ENTITY_BEACON		138.0
+#define ENTITY_MAGMABLOCK	213.0
 
 const float PI = 3.1415927;
 
@@ -230,6 +231,9 @@ void main() {
 	}
 	else if( mc_Entity.x == ENTITY_BEACON ){
 		glowmult = 1.2f;
+	}
+	else if( mc_Entity.x == ENTITY_MAGMABLOCK ){
+		glowmult = 1.4f;
 	}
 	#endif
 	float translucent = 1.0;
