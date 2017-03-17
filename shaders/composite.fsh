@@ -163,7 +163,7 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
 
 	float fogStartDistance	= 15.0;	// Higher -> far.
-	float fogDensity 				= 1.0;
+	float fogDensity 				= 0.8;
 
 	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos, 1.0);
 
