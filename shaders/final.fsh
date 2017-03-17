@@ -89,13 +89,6 @@ vec3 doFogBlur(vec3 clr, vec3 fragpos, vec2 coord) {
 
 }
 
-vec3 underwaterDarkening(float depth, vec3 color) {
-   vec3 UWDark;
-	 float UWDarkDepthMath = exp(-0.1 * depth) + 0.2;
-	 UWDark = color * clamp( UWDarkDepthMath, -10.0, 10.0 );
-	 return UWDark;
-}
-
 
 //-----------------------------------------------------
 //----------------------VOID MAIN----------------------
@@ -116,8 +109,6 @@ void main() {
 	color.rgb = doFogBlur(color.rgb, fragposition.xyz, newTexcoord);
 
   color = convertToHDR(color);
-
-  if (isEyeInWater == 1) color.rgb = underwaterDarkening(length(fragpos),color.rgb);
 
   gl_FragColor = vec4(color.rgb, 1.0f);
 }
