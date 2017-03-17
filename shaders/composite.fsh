@@ -1,19 +1,11 @@
 #version 120
 
 #define CLOUDS2D
-#define CLOUDS3D
-#define FOG
 #define UWFOG
 
 varying vec4 texcoord;
 varying vec2 texcoord2;
-varying vec3 ambient_color;
 
-varying float gp00;
-varying float gp11;
-varying float gp22;
-varying float gp32;
-varying vec2 igp;
 varying float weatherRatio;
 
 uniform sampler2D gcolor;
@@ -33,8 +25,6 @@ uniform vec3 upPosition;
 
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
-
-uniform ivec2 eyeBrightness;
 
 uniform float frameTimeCounter;
 uniform float wetness;
@@ -57,64 +47,11 @@ float comp = 1.0 - near / far / far;
 bool hand = texture2D(depthtex0, texcoord2.st).x < 0.56;
 float depth0 = texture2D(depthtex0, texcoord2.st).x;
 float depth1 = texture2D(depthtex1, texcoord2.st).x;
-bool land	= depth1 < comp;
 bool sky	= depth1 > comp;
 float gaux3Material = texture2D(gaux3, texcoord2.st).b;
 bool water = gaux3Material > 0.09 && gaux3Material < 0.11;
 
 //varsinitend
-
-//3DCLOUDS
-vec3 invproj(in vec3 p) {
-//    vec4 pos = gbufferProjectionInverse * vec4(p * 2.0 - 1.0, 1.0);
-//    return pos.xyz / pos.w;
-    vec3 pos = p - 0.5;
-    float z = gp32 / (pos.z + gp22);
-    return vec3(pos.xy * igp, -1.0) * z;
-}
-
-float noise(in vec3 x) {
-    vec3 p = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    vec2 uv = (p.xy + vec2(37.0, 17.0) * p.z) + f.xy;
-    return mix(texture2D(noisetex, uv/noiseTextureResolution).x, texture2D(noisetex, (uv + vec2(37.0, 17.0))/noiseTextureResolution).x, f.z);
-}
-
-float getCloudNoise(in vec3 worldPos) {
-    vec3 coord = worldPos;
-    coord.x += frameTimeCounter * 3.0;
-    coord *= 0.02;
-    float n = noise(coord) * 0.5;
-    n += noise(coord * 3.0) * 0.25;
-    n += noise(coord * 9.0) * 0.125;
-    n += noise(coord * 27.0) * 0.0625;
-    n += noise(coord * 81.0) * 0.03125;
-    float rain_effect = (0.16 + (rainStrength * 0.16)) * min(1.25, wetness + rainStrength) - 0.6;
-    return max(n + rain_effect, 0.0) / (1.0 + rain_effect);
-}
-
-float cloudRayMarching(in vec3 start, in vec3 end) {
-    vec3 dir = normalize(end - start);
-    float ay = abs(dir.y);
-    float cutoff = abs((180.0 + 210.0) * 0.5 - start.y) * 0.0025;
-    if (max(start.y, end.y) < 180.0 || 210.0 < min(start.y, end.y) || ay < cutoff) {
-        // no clouds
-        return 0.0;
-    }
-    float sum = 0.0;
-    vec3 ray = start + (max(0.0, 180.0 - start.y) - max(0.0, start.y - 210.0)) * dir / dir.y;
-    vec3 step = dir / ay;
-    float wall = mix(max(180.0, end.y), min(210.0, end.y), step.y * 0.5 + 0.5);
-    float dest = min(ray.y * step.y + 24.0, wall * step.y) * step.y;    // since step.y = +/-1.0
-    float dy = abs(dest - ray.y);   // number of steps to dest
-    for (int i = 0; i < dy; i++) {
-        ray += step;
-        sum += getCloudNoise(ray) * 0.04;
-    }
-    return sum * min(1.0, (ay - cutoff) * 5);
-}
-//END 3DClOUDS
 float time = worldTime;
 float TimeSunrise		= ((clamp(time, 22000.0, 24000.0) - 22000.0) / 2000.0) + (1.0 - (clamp(time, 0.0, 3000.0)/3000.0));
 float TimeNoon			= ((clamp(time, 0.0, 3000.0)) / 3000.0) - ((clamp(time, 9000.0, 12000.0) - 9000.0) / 3000.0);
@@ -189,9 +126,9 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 
 		vec4 totalcloud = vec4(0.0);
 
-		float cloudDensity = mix(1.0, 0.6, weatherRatio);
+		float cloudDensity = mix(1.0, 0.5, weatherRatio);
 		float surfaceScattering = mix(1.0, 0.4, weatherRatio);
-		float lightVecSurfaceScattering = mix(1.0, 0.2, weatherRatio);
+		float lightVecSurfaceScattering = mix(((0.4 * TimeSunrise) + (0.3 * TimeSunset)), 0.2, weatherRatio);
 
 		for (int i = 0; i < 8; i++) {
 
@@ -199,11 +136,11 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 			float density = pow(max(1.0 - cl * cloudDensity, 0.0) * (i / 5.0), 2.0);
 
 			vec3 c = cloudClr;
-				 	 c = mix(c, sunClr, min(subSurfaceScattering2(normalize(sunPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * 5.0 * TimeDay * surfaceScattering, 1.0));
-					 c = mix(c, sunClr * 2.0, min(subSurfaceScattering(normalize(sunPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * (1.0 - TimeNoon) * (1.0 - TimeMidnight * 0.8) * lightVecSurfaceScattering, 1.0));
+				 	 c = mix(c, sunClr * 0.5, min(subSurfaceScattering2(normalize(sunPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeDay * surfaceScattering, 1.0));
+					 c = mix(c, sunClr * (2.0 * rainStrength), min(subSurfaceScattering(normalize(sunPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * (1.0 - TimeNoon) * (1.0 - TimeMidnight * 0.8) * lightVecSurfaceScattering, 1.0));
 
-				 	 c = mix(c, moonClr, subSurfaceScattering2(normalize(moonPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeMidnight * 0.4 * surfaceScattering);
-				 	 c = mix(c, moonClr, subSurfaceScattering(normalize(moonPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * TimeMidnight * 0.2 * lightVecSurfaceScattering);
+				 	 c = mix(c, moonClr * (3.0 - (rainStrength * 2.0)), subSurfaceScattering2(normalize(moonPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeMidnight * 0.4 * surfaceScattering);
+				 	 c = mix(c, moonClr * (6.0 - (rainStrength * 2.0)), subSurfaceScattering(normalize(moonPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * TimeMidnight * 0.2 * lightVecSurfaceScattering);
 
 			cl = max(cl - (abs(i - 8.0) / 8.) * 0.2, 0.) * 0.08;
 
@@ -222,30 +159,6 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 
 }
 //END 2DCLOUDS
-
-//FOG
-vec3 drawFog(vec3 clr, vec3 fogClr, vec3 fragpos0, vec3 fragpos1) {
-
-	float fogStartDistance		= 125.0;	// Higher -> far.
-	float fogDensity 					= 0.3;
-
-	// Make the fog stronger while raining.
-	fogDensity = mix(fogDensity, min(fogDensity * 1.5, 1.0), rainStrength);
-
-	vec3 fragpos = fragpos1;
-	if (water) fragpos = fragpos0;
-
-	float fogFactor = 1.0 - exp(-pow(length(fragpos.xyz) / max(fogStartDistance, 0.0), 3.0));
-
-	// Remove fog when player is underwater.
-	if (bool(isEyeInWater)) fogFactor = 0.0;
-
-	if (!hand) clr = mix(clr.rgb, fogClr, fogFactor * fogDensity * (eyeBrightness.y / 240.0));
-
-	return clr;
-
-}
-//END FOG
 //UnderwaterFog
 vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
 
@@ -270,8 +183,6 @@ void main() {
   vec3 finalComposite = texture2D(gcolor, texcoord.st).rgb;
   
   vec4 aux = texture2D(gaux1, texcoord.st);
-  vec3 eye = invproj(vec3(texcoord.st, texture2D(depthtex0, texcoord.st).r));
-  vec4 wpos = gbufferModelViewInverse * vec4(eye, 1.0);
   float no_hand = float(aux.g < 0.35 || 0.45 < aux.g);
 #ifdef CLOUDS2D
   vec4 skyFragposition  = gbufferProjectionInverse * (vec4(texcoord2.st, 1.0, 1.0) * 2.0 - 1.0);
