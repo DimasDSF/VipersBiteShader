@@ -1,6 +1,10 @@
 #version 120
 
 #define CLOUDS2D
+#define STARS
+#define MOONSUN
+#define iMOONSIZE 1 // [1 2 3 4]
+#define iSUNGLOWSIZE 1.0 // [1.0 2.0 3.0 4.0]
 #define UWFOG
 
 varying vec4 texcoord;
@@ -39,7 +43,7 @@ uniform int isEyeInWater;
 const int RGBA16 = 1;
 const int gcolorformat = RGBA16;
 
-const int noiseTextureResolution = 64;
+const int noiseTextureResolution = 128; // [64 128]
 
 //varsinit
 
@@ -139,7 +143,7 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 				 	 c = mix(c, sunClr * 0.5, min(subSurfaceScattering2(normalize(sunPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeDay * surfaceScattering, 1.0));
 					 c = mix(c, sunClr * (2.0 * rainStrength), min(subSurfaceScattering(normalize(sunPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * (1.0 - TimeNoon) * (1.0 - TimeMidnight * 0.8) * lightVecSurfaceScattering, 1.0));
 
-				 	 c = mix(c, moonClr * (3.0 - (rainStrength * 2.0)), subSurfaceScattering2(normalize(moonPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeMidnight * 0.4 * surfaceScattering);
+				 	 c = mix(c, moonClr , subSurfaceScattering2(normalize(moonPosition), fragpos.xyz, 0.1) * pow(density, 2.0) * TimeMidnight * 0.4 * surfaceScattering);
 				 	 c = mix(c, moonClr * (6.0 - (rainStrength * 2.0)), subSurfaceScattering(normalize(moonPosition), fragpos.xyz, 10.0) * pow(density, 3.0) * TimeMidnight * 0.2 * lightVecSurfaceScattering);
 
 			cl = max(cl - (abs(i - 8.0) / 8.) * 0.2, 0.) * 0.08;
@@ -159,6 +163,59 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 
 }
 //END 2DCLOUDS
+//Moon/Sun
+vec3 drawMoonSun(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr) {
+
+	float sunSkyIlluminationRadius = mix(20.0, 7.5, iSUNGLOWSIZE/4.0f);
+
+	// Get position.
+	float sunVector = max(dot(normalize(fragpos), normalize(sunPosition)), 0.0);
+	float moonVector = max(dot(normalize(fragpos), normalize(moonPosition)), 0.0);
+
+	// Calculate light vectors.
+	float sun	= clamp(pow(sunVector, 2000.0) * 3.0, 0.0, 1.0);
+	float moon = clamp(pow(moonVector, (10000 - (iMOONSIZE * 2000))) * 10.0, 0.0, 1.0);
+	float sunSkyIllumination = pow(sunVector, sunSkyIlluminationRadius) * 0.3;
+	sunSkyIllumination *= 1.7;
+	
+	float sunFactor = sun + sunSkyIllumination;
+
+	sunFactor	= mix(sunFactor, 0.0, getWorldHorizonPos(fragpos.xyz));
+	sunFactor	= mix(sunFactor, sunFactor / 4.0, TimeMidnight);
+	moon			= mix(moon, 0.0, getWorldHorizonPos(fragpos.xyz));
+
+	clr = mix(clr, sunClr, sunFactor * (1.0 - rainStrength));
+	clr = mix(clr, moonClr, moon * (1.0 - rainStrength));
+
+	return clr;
+
+}
+//Moon/Sun
+//STARS
+vec3 drawStars(vec3 clr, vec3 fragpos) {
+
+	float starsScale = 20.0;
+	float starsMovementSpeed = 500.0;
+
+	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos.xyz, 1.0);
+
+	float position = dot(normalize(fragpos.xyz), upPosition);
+	float horizonPos = max(1.0 - pow(abs(position) / 75.0, 1.0), 0.0);
+
+	vec2 coord = (worldPos.xz / (worldPos.y / pow(position, 0.75)) / starsScale) + vec2(frameTimeCounter / starsMovementSpeed);
+
+	float noise  = texture2D(noisetex, coord).x;
+				noise += texture2D(noisetex, coord * 2.0).x / 2.0;
+				noise += texture2D(noisetex, coord * 4.0).x / 4.0;
+				noise += texture2D(noisetex, coord * 8.0).x / 8.0;
+
+	noise = max(noise - 1.5, 0.0);
+	noise = mix(noise, 0.0, clamp(getWorldHorizonPos(fragpos) + horizonPos + getCloudNoise2D(fragpos, 0), 0.0, 1.0));
+
+	return mix(clr, vec3(1.0) * 2.5, noise * TimeMidnight * (1 - rainStrength) );
+
+}
+//ENDSTARS
 //UnderwaterFog
 vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
 
@@ -218,6 +275,20 @@ void main() {
 			 cloudMoon_Color += vec3(0.85, 0.9, 1.0) * 0.5	* TimeMidnight		* weatherRatio;
   //end cloudcolors
   if (sky) finalComposite.rgb = draw2DClouds(finalComposite.rgb, skyFragposition.xyz, cloudSun_Color, cloudMoon_Color, cloud_Color);
+#endif
+#ifdef STARS
+if (sky) finalComposite.rgb = drawStars(finalComposite.rgb, skyFragposition.xyz);
+#endif
+#ifdef MOONSUN
+vec3 sun_Color  = vec3(0.0);
+			 sun_Color += vec3(1.0, 0.8, 0.6) 	* 1.6	* TimeSunrise;
+			 sun_Color += vec3(1.0, 0.93, 0.85) * 1.6	* TimeNoon;
+			 sun_Color += vec3(1.0, 0.8, 0.6) 	* 1.6	* TimeSunset;
+			 sun_Color += vec3(1.0, 0.45, 0.2)				* TimeMidnight;
+
+vec3 moon_Color = vec3(1.0) * 0.7;
+
+if (sky) finalComposite.rgb = drawMoonSun(finalComposite.rgb, skyFragposition.xyz, sun_Color, moon_Color);
 #endif
 #ifdef UWFOG
   vec4 fragposition0  = gbufferProjectionInverse * (vec4(texcoord2.st, depth0, 1.0) * 2.0 - 1.0);
