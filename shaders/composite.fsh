@@ -92,7 +92,7 @@ float getCloudNoise2D(vec3 fragpos, int integer_i) {
 
 	#ifdef CLOUDS2D
 
-		vec2 wind = vec2(frameTimeCounter * cloudWindSpeed / (500.0-(rainStrength*250.0)));
+		vec2 wind = vec2(frameTimeCounter * cloudWindSpeed / 500.0);
 
 		vec4 worldPosCL = gbufferModelViewInverse * vec4(fragpos.xyz, 1.0);
 		vec3 worldVectorCL = normalize(worldPosCL.xyz);
