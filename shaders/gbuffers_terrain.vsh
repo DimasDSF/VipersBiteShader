@@ -142,7 +142,22 @@ void main() {
 	#endif
 	#ifdef WAVING_VINES
 	if ( mc_Entity.x == ENTITY_VINES )
-			position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,1.0), vec3(0.5,0.1,0.5));
+			if (mc_Entity.z == 1.0) {
+				//South
+				position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,0.0), vec3(0.5,0.1,0.1));
+			}
+			else if (mc_Entity.z == 2.0) {
+				//West
+				position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(0.0,0.2,1.0), vec3(0.1,0.1,0.5));
+			}
+			else if (mc_Entity.z == 4.0) {
+				//North
+				position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(1.0,0.2,0.0), vec3(0.5,0.1,0.1));
+			}
+			else if (mc_Entity.z == 8.0) {
+				//East
+				position.xyz += calcMove(worldpos.xyz, 0.0040, 0.0064, 0.0043, 0.0035, 0.0037, 0.0041, vec3(0.0,0.2,1.0), vec3(0.1,0.1,0.5));
+			}
 	#endif
 	#ifdef WAVING_FLOWERS
 	if ( mc_Entity.x == ENTITY_FLOWERS)
@@ -170,7 +185,11 @@ void main() {
 	#endif
 	if (istopv > 0.9) {
 		#ifdef WAVING_GRASS
+		float facingEast = abs(normalize(gl_Normal.xz).x);
+		float facingUp = abs(gl_Normal.y);
 		if ( mc_Entity.x == ENTITY_TALLGRASS)
+				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
+		if ( mc_Entity.x == 2.0 && gl_Normal.y <0.5 && facingEast > 0.01 && facingEast < 0.99 && facingUp < 0.9)
 				position.xyz += calcMove(worldpos.xyz, 0.0041, 0.0070, 0.0044, 0.0038, 0.0063, 0.0000, vec3(0.8,0.0,0.8), vec3(0.4,0.0,0.4));
 		#endif
 		#ifdef WAVING_FLOWERS
