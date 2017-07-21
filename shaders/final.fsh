@@ -34,7 +34,7 @@ float timefract = worldTime;
 float RainPowerColorAmp(){
 	float RainAmplifier;
 	RainAmplifier = exp( -(pow(rainStrength, 2) / 2) ) ;
-	return RainAmplifier;
+	return clamp(RainAmplifier, 0.5, 1.0);
 }
 
 vec3 convertToHDR(in vec3 color){
@@ -85,7 +85,7 @@ vec3 ApplyEyeAdapt(in vec3 color){
 	}
 	else {
 		UEAdaptedColor = color;
-		OEAdaptedColor = color * 4.0f;
+		OEAdaptedColor = color * 3.0;
 	}
 	
 	ColorAdapted = mix(OEAdaptedColor, UEAdaptedColor, brightnessSum);
@@ -100,8 +100,21 @@ vec2 underwaterRefraction(vec2 coord){
 	float refractionSize = 2.0;
 
 	vec2 refractCoord = vec2(sin(frameTimeCounter * refractionSpeed + coord.x * 25.0 * refractionSize + coord.y * 12.5 * refractionSize));
-
-	return bool(isEyeInWater)? coord + refractCoord * refractionMultiplier : coord;
+	vec2 ret;
+	if (isEyeInWater == 1)
+	{
+		ret = coord + refractCoord * refractionMultiplier;
+	}
+	else if (isEyeInWater == 2)
+	{
+		ret = coord + refractCoord * 0.5 * refractionMultiplier;
+	}
+	else
+	{
+		ret = coord;
+	}
+	
+	return ret;
 
 }
 

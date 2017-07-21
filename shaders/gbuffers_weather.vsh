@@ -22,8 +22,8 @@ void main() {
 	
 	bool istopv = worldpos.y > cameraPosition.y+5.0;
 	
-	if (!istopv) position.xz += vec2(3.0,1.0)+sin(frameTimeCounter)*sin(frameTimeCounter)*sin(frameTimeCounter)*vec2(2.1,0.6);
-	position.xz -= (vec2(3.0,1.0)+sin(frameTimeCounter)*sin(frameTimeCounter)*sin(frameTimeCounter)*vec2(2.1,0.6))*0.5;
+	if (!istopv) position.xz += vec2(1.0,1.0)+sin(frameTimeCounter)*sin(frameTimeCounter)*sin(frameTimeCounter)*vec2(1.1,0.6);
+	position.xz -= (vec2(1.0,1.0)+sin(frameTimeCounter)*sin(frameTimeCounter)*sin(frameTimeCounter)*vec2(1.1,0.6))*0.5;
 	
 	gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 	

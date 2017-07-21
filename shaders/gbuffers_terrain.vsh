@@ -43,6 +43,8 @@
 #define ENTITY_PORTAL		90.0
 #define ENTITY_BEACON		138.0
 #define ENTITY_MAGMABLOCK	213.0
+#define ENTITY_STAINEDGLASS 95.0
+#define ENTITY_GLASS		20.0
 
 const float PI = 3.1415927;
 
@@ -50,8 +52,11 @@ varying vec4 color;
 varying vec2 lmcoord;
 varying float mat;
 varying vec2 texcoord;
+varying vec4 texcoord4;
 varying vec3 normal;
 varying float glowmult;
+varying float canbewet;
+varying vec3 worldpos;
 
 attribute vec4 mc_Entity;
 attribute vec4 mc_midTexCoord;
@@ -123,6 +128,7 @@ vec3 calcLavaMove(in vec3 pos)
 void main() {
 	vec4 vtexcoordam;
 	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
+	texcoord4 = gl_MultiTexCoord0;
 	vec2 midcoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
 	vec2 texcoordminusmid = texcoord-midcoord;
 	vtexcoordam.pq  = abs(texcoordminusmid)*2;
@@ -130,10 +136,11 @@ void main() {
 	vec2 vtexcoord    = sign(texcoordminusmid)*0.5+0.5;
 	mat = 1.0f;
 	glowmult = 1.0f;
+	canbewet = 1.0f;
 	float istopv = 0.0;
 	if (gl_MultiTexCoord0.t < mc_midTexCoord.t) istopv = 1.0;
 	vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
-	vec3 worldpos = position.xyz + cameraPosition;
+	worldpos = position.xyz + cameraPosition;
 
 	#ifdef WAVING_LEAVES	
 	if ( mc_Entity.x == ENTITY_LEAVES || mc_Entity.x == ENTITY_LEAVES_2 ){
@@ -260,6 +267,12 @@ void main() {
 			mat = 0.2;
 			translucent = 0.5;
 		}
+	//Always Dry Blocks
+	if (mc_Entity.x == ENTITY_WATERSTILL || mc_Entity.x == ENTITY_WATERFLOWING || mc_Entity.x == ENTITY_LAVAFLOWING || mc_Entity.x == ENTITY_LAVASTILL || mc_Entity.x == 78.0 || mc_Entity.x == 80.0 || mc_Entity.x == ENTITY_GLASS || mc_Entity.x == ENTITY_STAINEDGLASS)
+	{
+		canbewet = 0.0;
+	}
+	//Always Dry Blocks End
 	gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 
 	color = gl_Color;

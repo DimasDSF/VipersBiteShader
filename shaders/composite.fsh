@@ -6,6 +6,7 @@
 #define iMOONSIZE 1 // [1 2 3 4]
 #define iSUNGLOWSIZE 1.0 // [1.0 2.0 3.0 4.0]
 #define UWFOG
+#define FOG
 
 varying vec4 texcoord;
 varying vec2 texcoord2;
@@ -35,6 +36,7 @@ uniform float wetness;
 uniform float rainStrength;
 uniform float near;
 uniform float far;
+uniform vec3 fogColor;
 
 uniform int worldTime;
 
@@ -217,22 +219,61 @@ vec3 drawStars(vec3 clr, vec3 fragpos) {
 }
 //ENDSTARS
 //UnderwaterFog
-vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
+vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fogClrLava, vec3 fragpos) {
 
-	float fogStartDistance	= 15.0;	// Higher -> far.
+	float fogStartDistance	= 7.0;	// Higher -> far.
 	float fogDensity 				= 0.8;
-
+	if (isEyeInWater == 2) fogStartDistance = 1.0;
+	if (isEyeInWater == 2) fogDensity = 0.99;
+	
 	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos, 1.0);
 
 	float fogFactor = 1.0 - exp(-pow(length(fragpos.xyz) / fogStartDistance, 2.0));
 		  	fogFactor = mix(0.0, fogFactor, fogDensity);
 
-	if (bool(isEyeInWater)) clr = mix(clr.rgb * vec3(0.6, 0.8, 1.0), fogClr, fogFactor);
-
+	if (bool(isEyeInWater))
+	{
+		if (isEyeInWater == 1)
+		{
+			clr = mix(clr.rgb * vec3(0.6, 0.8, 1.0), fogClr, fogFactor);
+		}
+	}
+	if (bool(isEyeInWater))
+	{
+		if (isEyeInWater == 2)
+		{
+			clr = mix(clr.rgb * vec3(0.6, 0.8, 1.0), fogClrLava, fogFactor);
+		}
+	}
 	return clr;
 
 }
 //UnderwaterFogEND
+
+//WeatherFXFog
+vec3 drawWeatherFXFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
+	float fogBaseDistance = 75.0;
+	float fogMinDistance = 15.0;
+
+	float fogTimeDistance	= (TimeSunrise * 10) + (TimeSunset * 10) + (TimeMidnight * 15);
+	float fogWeatherDistance = (rainStrength * 5.0) + (wetness * 35.0);
+	float fogWeatherDensity = (0.6 * wetness) + (0.3 * rainStrength); //0.5 Max
+	float fogDayTimeDensity = (0.4 * TimeSunrise) + (0.4 * TimeSunset) + (TimeMidnight * 0.6);
+	
+	float fogStartDistance = max(fogBaseDistance - (fogTimeDistance + fogWeatherDistance), fogMinDistance);
+	float fogDensity = min(fogWeatherDensity + fogDayTimeDensity, 0.9);
+	
+	
+	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos, 1.0);
+
+	float fogFactor = 1.0 - exp(-pow(length(fragpos.xyz) / fogStartDistance, 2.0));
+		  	fogFactor = mix(0.0, fogFactor, fogDensity);
+
+	clr = mix(clr.rgb, fogClr, fogFactor);
+	
+	return clr;
+}
+//WeatherFXFogEND
 
 /* DRAWBUFFERS:012 */
 
@@ -241,6 +282,9 @@ void main() {
   
   vec4 aux = texture2D(gaux1, texcoord.st);
   float no_hand = float(aux.g < 0.35 || 0.45 < aux.g);
+  vec4 fragposition0  = gbufferProjectionInverse * (vec4(texcoord2.st, depth0, 1.0) * 2.0 - 1.0);
+  fragposition0 /= fragposition0.w;
+  
 #ifdef CLOUDS2D
   vec4 skyFragposition  = gbufferProjectionInverse * (vec4(texcoord2.st, 1.0, 1.0) * 2.0 - 1.0);
   skyFragposition /= skyFragposition.w;
@@ -290,16 +334,23 @@ vec3 moon_Color = vec3(1.0) * 0.7;
 
 if (sky) finalComposite.rgb = drawMoonSun(finalComposite.rgb, skyFragposition.xyz, sun_Color, moon_Color);
 #endif
-#ifdef UWFOG
-  vec4 fragposition0  = gbufferProjectionInverse * (vec4(texcoord2.st, depth0, 1.0) * 2.0 - 1.0);
-  fragposition0 /= fragposition0.w;
-  vec3 underwater_Color  = vec3(0.0);
-		   underwater_Color += vec3(0.3, 0.65, 1.0)	* 0.6	* TimeSunrise;
-		   underwater_Color += vec3(0.3, 0.65, 1.0)				* TimeNoon;
-		   underwater_Color += vec3(0.3, 0.65, 1.0)	* 0.6	* TimeSunset;
-		   underwater_Color += vec3(0.0, 0.6, 1.0)	* 0.1	* TimeMidnight;
-  finalComposite.rgb = drawUnderwaterFog(finalComposite.rgb, underwater_Color * 0.13, fragposition0.xyz);
+vec3 underwater_Color  = vec3(0.0);
+		underwater_Color += vec3(0.3, 0.65, 1.0)	* 0.6	* TimeSunrise;
+		underwater_Color += vec3(0.3, 0.65, 1.0)				* TimeNoon;
+		underwater_Color += vec3(0.3, 0.65, 1.0)	* 0.6	* TimeSunset;
+		underwater_Color += vec3(0.0, 0.6, 1.0)	* 0.1	* TimeMidnight;
+vec3 lava_Color = vec3(1.0, 0.75, 0.40); 
+finalComposite.rgb = drawUnderwaterFog(finalComposite.rgb, underwater_Color * 0.20, lava_Color, fragposition0.xyz);
+
+#ifdef FOG
+vec3 fog_Color = vec3(0.0);
+		fog_Color += vec3(0.8, 0.8, 0.8) * 0.4		* TimeSunrise;
+		fog_Color += vec3(0.8, 0.8, 0.8) * 0.7		* TimeNoon;
+		fog_Color += vec3(0.8, 0.8, 0.8) * 0.4		* TimeSunset;
+		fog_Color += vec3(0.8, 0.8, 0.8) * 0.15		* TimeMidnight;
+  finalComposite.rgb = drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition0.xyz);
 #endif
+
   vec3 finalCompositeNormal = texture2D(gcolor, texcoord.st).rgb;
   vec3 finalCompositeDepth = texture2D(gcolor, texcoord.st).rgb;
 
