@@ -34,7 +34,7 @@ float timefract = worldTime;
 float RainPowerColorAmp(){
 	float RainAmplifier;
 	RainAmplifier = exp( -(pow(rainStrength, 2) / 2) ) ;
-	return clamp(RainAmplifier, 0.5, 1.0);
+	return max(RainAmplifier, 0.5);
 }
 
 vec3 convertToHDR(in vec3 color){
