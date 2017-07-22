@@ -27,7 +27,7 @@ void main() {
 	
 	gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 	
-	color = gl_Color;
+	color = gl_Color * 0.65;
 	
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
 
