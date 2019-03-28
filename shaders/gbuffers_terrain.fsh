@@ -8,22 +8,17 @@ varying vec4 color;
 varying float mat;
 varying vec2 texcoord;
 varying vec4 texcoord4;
-varying vec3 normal;
 varying vec3 worldpos;
 varying float canbewet;
 
 varying float glowmult;
+varying float glowing;
 
-uniform sampler2D depthtex1;
 uniform mat4 gbufferProjectionInverse;
-uniform vec3 upPosition;
 uniform sampler2D texture;
 uniform sampler2D lightmap;
 uniform sampler2D specular;
 uniform sampler2D noisetex;
-uniform vec3 sunPosition;
-uniform vec3 moonPosition;
-uniform int worldTime;
 uniform float wetness;
 
 vec3 Get3DNoise(in vec3 pos)
@@ -61,7 +56,6 @@ float GetModulatedRainSpecular(in vec3 pos)
 	return n;
 }
 
-
 //-----------------------------------------------------
 //----------------------VOID MAIN----------------------
 //-----------------------------------------------------
@@ -70,7 +64,6 @@ void main() {
 
 
 #ifdef RAIN_PUDDLES
-//RainSpec
 
 vec2 parallaxCoord = texcoord4.st;
 
@@ -106,7 +99,7 @@ vec4 rainpuddlesccolor = color;
 #endif
 
 
-/* DRAWBUFFERS:04 */
+/* DRAWBUFFERS:067 */
 
   // 0 = gcolor
   // 1 = gdepth
@@ -116,7 +109,8 @@ vec4 rainpuddlesccolor = color;
   // 5 = gaux2
   // 6 = gaux3
   // 7 = gaux4
-
-	gl_FragData[0] = (texture2D(texture, texcoord.st) * texture2D(lightmap, lmcoord.st) * glowmult * rainpuddlesccolor);
-	gl_FragData[1] = vec4(lmcoord.t, mat, lmcoord.s, 1.0);
+  
+	gl_FragData[0] = texture2D(texture, texcoord.st) * texture2D(lightmap, lmcoord.st) * glowmult * rainpuddlesccolor;
+	gl_FragData[1] = vec4(lmcoord.t, lmcoord.s, mat, 1.0);
+	gl_FragData[2] = vec4(lmcoord.t, lmcoord.s, glowmult, 1.0);
 }

@@ -14,18 +14,17 @@ varying vec2 texcoord2;
 varying float weatherRatio;
 
 uniform sampler2D gcolor;
-uniform sampler2D gnormal;
-uniform sampler2D gdepth;
 uniform sampler2D noisetex;
 uniform sampler2D gaux1;
 uniform sampler2D gaux3;
+uniform sampler2D texture;
+uniform sampler2D normal;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
 
-uniform vec3 cameraPosition;
 uniform vec3 upPosition;
 
 uniform vec3 sunPosition;
@@ -36,7 +35,7 @@ uniform float wetness;
 uniform float rainStrength;
 uniform float near;
 uniform float far;
-uniform vec3 fogColor;
+uniform vec3 skyColor;
 
 uniform int worldTime;
 
@@ -54,8 +53,15 @@ bool hand = texture2D(depthtex0, texcoord2.st).x < 0.56;
 float depth0 = texture2D(depthtex0, texcoord2.st).x;
 float depth1 = texture2D(depthtex1, texcoord2.st).x;
 bool sky	= depth1 > comp;
+bool land = depth1 < comp;
 float gaux3Material = texture2D(gaux3, texcoord2.st).b;
 bool water = gaux3Material > 0.09 && gaux3Material < 0.11;
+bool ice = gaux3Material > 0.19 && gaux3Material < 0.21;
+bool stainedGlass = gaux3Material > 0.29 && gaux3Material < 0.31;
+bool portal = gaux3Material > 0.39 && gaux3Material < 0.41;
+bool raindrops = gaux3Material > 0.69 && gaux3Material < 0.71;
+bool handgaux = gaux3Material > 0.49 && gaux3Material < 0.51;
+bool GAUX1 = gaux3Material > 0.0;
 
 //varsinitend
 float time = worldTime;
@@ -99,8 +105,6 @@ float getCloudNoise2D(vec3 fragpos, int integer_i) {
 		vec4 worldPosCL = gbufferModelViewInverse * vec4(fragpos.xyz, 1.0);
 		vec3 worldVectorCL = normalize(worldPosCL.xyz);
 
-		float position = dot(normalize(fragpos.xyz), upPosition);
-
 		worldVectorCL *= (1.0 - integer_i * cloudThickness + 300.0) / worldVectorCL.y;
 
 		vec2 coord2dcl = (worldVectorCL.xz / 130.0 / cloudScale) + wind / 2.5;
@@ -123,9 +127,6 @@ vec3 draw2DClouds(vec3 clr, vec3 fragpos, vec3 sunClr, vec3 moonClr, vec3 cloudC
 	float cloudOpacity = 1.8;
 
 	#ifdef CLOUDS2D
-
-		vec4 worldPosCL = gbufferModelViewInverse * vec4(fragpos.xyz, 1.0) / far * 128.0;
-		vec3 worldVectorCL = normalize(worldPosCL.xyz);
 
 		float position = dot(normalize(fragpos.xyz), upPosition);
 		float horizonPos = max(1.0 - pow(abs(position) / 75.0, 1.0), 0.0);
@@ -214,7 +215,7 @@ vec3 drawStars(vec3 clr, vec3 fragpos) {
 	noise = max(noise - 1.5, 0.0);
 	noise = mix(noise, 0.0, clamp(getWorldHorizonPos(fragpos) + horizonPos + getCloudNoise2D(fragpos, 0), 0.0, 1.0));
 
-	return mix(clr, vec3(1.0) * 2.5, noise * TimeMidnight * (1 - rainStrength) );
+	return mix(clr, vec3(1.0) * 20, noise * TimeMidnight * (1 - rainStrength) );
 
 }
 //ENDSTARS
@@ -223,10 +224,10 @@ vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fogClrLava, vec3 fragpos) {
 
 	float fogStartDistance	= 7.0;	// Higher -> far.
 	float fogDensity 				= 0.8;
-	if (isEyeInWater == 2) fogStartDistance = 1.0;
-	if (isEyeInWater == 2) fogDensity = 0.99;
-	
-	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos, 1.0);
+	if (isEyeInWater == 2) {
+		fogStartDistance = 1.0;
+		fogDensity = 0.99;
+	}
 
 	float fogFactor = 1.0 - exp(-pow(length(fragpos.xyz) / fogStartDistance, 2.0));
 		  	fogFactor = mix(0.0, fogFactor, fogDensity);
@@ -237,10 +238,7 @@ vec3 drawUnderwaterFog(vec3 clr, vec3 fogClr, vec3 fogClrLava, vec3 fragpos) {
 		{
 			clr = mix(clr.rgb * vec3(0.6, 0.8, 1.0), fogClr, fogFactor);
 		}
-	}
-	if (bool(isEyeInWater))
-	{
-		if (isEyeInWater == 2)
+		else if(isEyeInWater == 2)
 		{
 			clr = mix(clr.rgb * vec3(0.6, 0.8, 1.0), fogClrLava, fogFactor);
 		}
@@ -263,17 +261,39 @@ vec3 drawWeatherFXFog(vec3 clr, vec3 fogClr, vec3 fragpos) {
 	float fogStartDistance = max(fogBaseDistance - (fogTimeDistance + fogWeatherDistance), fogMinDistance);
 	float fogDensity = min(fogWeatherDensity + fogDayTimeDensity, 0.9);
 	
-	
-	vec4 worldPos = gbufferModelViewInverse * vec4(fragpos, 1.0);
 
 	float fogFactor = 1.0 - exp(-pow(length(fragpos.xyz) / fogStartDistance, 2.0));
 		  	fogFactor = mix(0.0, fogFactor, fogDensity);
-
-	clr = mix(clr.rgb, fogClr, fogFactor);
+			
+	clr = mix(clr.rgb, fogClr, min(fogFactor,1.0));
 	
 	return clr;
 }
 //WeatherFXFogEND
+
+float mapval(float value, float explow, float exphigh, float outlow, float outhigh) {
+	if (outlow > outhigh)
+	{
+		return clamp(outlow + (value - explow) * (outhigh - outlow) / (exphigh - explow),outhigh,outlow);
+	}
+	else
+	{
+		return clamp(outlow + (value - explow) * (outhigh - outlow) / (exphigh - explow),outlow,outhigh);
+	}
+}
+
+int roundval(float val) {
+	/*highp int ret = int(val);
+	if (val - ret > 0.5) ret += 1;
+	return ret;*/
+	if (val >= 0.5){
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
 
 /* DRAWBUFFERS:012 */
 
@@ -281,10 +301,11 @@ void main() {
   vec3 finalComposite = texture2D(gcolor, texcoord.st).rgb;
   
   vec4 aux = texture2D(gaux1, texcoord.st);
-  float no_hand = float(aux.g < 0.35 || 0.45 < aux.g);
   vec4 fragposition0  = gbufferProjectionInverse * (vec4(texcoord2.st, depth0, 1.0) * 2.0 - 1.0);
   fragposition0 /= fragposition0.w;
-  
+  vec4 fragposition1  = gbufferProjectionInverse * (vec4(texcoord2.st, depth1, 1.0) * 2.0 - 1.0);
+  fragposition1 /= fragposition1.w;
+  if (sky) finalComposite.rgb = skyColor;
 #ifdef CLOUDS2D
   vec4 skyFragposition  = gbufferProjectionInverse * (vec4(texcoord2.st, 1.0, 1.0) * 2.0 - 1.0);
   skyFragposition /= skyFragposition.w;
@@ -318,7 +339,7 @@ void main() {
 			 cloudMoon_Color *= 1.0 - weatherRatio;
 			 cloudMoon_Color += vec3(0.85, 0.9, 1.0) * 0.5	* TimeMidnight		* weatherRatio;
   //end cloudcolors
-  if (sky) finalComposite.rgb = draw2DClouds(finalComposite.rgb, skyFragposition.xyz, cloudSun_Color, cloudMoon_Color, cloud_Color);
+  if (sky && !raindrops) finalComposite.rgb = draw2DClouds(finalComposite.rgb, skyFragposition.xyz, cloudSun_Color, cloudMoon_Color, cloud_Color);
 #endif
 #ifdef STARS
 if (sky) finalComposite.rgb = drawStars(finalComposite.rgb, skyFragposition.xyz);
@@ -330,7 +351,7 @@ vec3 sun_Color  = vec3(0.0);
 			 sun_Color += vec3(1.0, 0.8, 0.6) 	* 1.6	* TimeSunset;
 			 sun_Color += vec3(1.0, 0.45, 0.2)				* TimeMidnight;
 
-vec3 moon_Color = vec3(1.0) * 0.7;
+vec3 moon_Color = vec3(1.0) * 2.0;
 
 if (sky) finalComposite.rgb = drawMoonSun(finalComposite.rgb, skyFragposition.xyz, sun_Color, moon_Color);
 #endif
@@ -339,19 +360,31 @@ vec3 underwater_Color  = vec3(0.0);
 		underwater_Color += vec3(0.3, 0.65, 1.0)				* TimeNoon;
 		underwater_Color += vec3(0.3, 0.65, 1.0)	* 0.6	* TimeSunset;
 		underwater_Color += vec3(0.0, 0.6, 1.0)	* 0.1	* TimeMidnight;
-vec3 lava_Color = vec3(1.0, 0.75, 0.40); 
-finalComposite.rgb = drawUnderwaterFog(finalComposite.rgb, underwater_Color * 0.20, lava_Color, fragposition0.xyz);
-
+vec3 lava_Color = vec3(1.0, 1.0, 0.05);
+finalComposite.rgb = drawUnderwaterFog(finalComposite.rgb, underwater_Color * 0.30, lava_Color, fragposition0.xyz);
+if (portal) finalComposite.rgb = mix(finalComposite.rgb * vec3(1.0,1.0,mapval(sin(frameTimeCounter),0.0,1.0,1.0,2.0)),vec3(0.0,0.0,0.0),min(1.0,max(0.0,length((gbufferModelViewInverse * vec4(fragposition0.xyz, 1.0)).xyz)*0.05)));
 #ifdef FOG
 vec3 fog_Color = vec3(0.0);
 		fog_Color += vec3(0.8, 0.8, 0.8) * 0.4		* TimeSunrise;
 		fog_Color += vec3(0.8, 0.8, 0.8) * 0.7		* TimeNoon;
 		fog_Color += vec3(0.8, 0.8, 0.8) * 0.4		* TimeSunset;
 		fog_Color += vec3(0.8, 0.8, 0.8) * 0.15		* TimeMidnight;
-  finalComposite.rgb = drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition0.xyz);
+		if (stainedGlass || ice) finalComposite.rgb = mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz),texture2D(texture,texcoord.st).rgb,0.5);
+		if (isEyeInWater == 1) finalComposite.rgb = mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), vec3(0.3, 0.65, 1.0) * 0.3, 0.5);
+		if(isEyeInWater == 0 && sky && water){
+			//finalComposite.rgb = mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), mix(vec3(0.3, 0.65, 1.0) * TimeDay, skyColor + fog_Color, rainStrength), 0.3);
+			//finalComposite.rgb = mix(mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), mix(vec3(0.3, 0.65, 1.0) * TimeDay, skyColor + fog_Color, rainStrength), 0.3), mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), vec3(0.3, 0.65, 1.0) * 0.3 * max(0.45, TimeDay), 0.6), roundval(length((gbufferModelViewInverse * vec4(fragposition1.xyz, 1.0)).xyz)*min(((1/far)+0.0007),1.0)));
+			//finalComposite.rgb = mix(mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), mix(vec3(0.3, 0.65, 1.0) * TimeDay, skyColor + fog_Color, rainStrength), 0.3), mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), vec3(0.3, 0.65, 1.0) * 0.3 * max(0.45, TimeDay), 0.6), roundval(length((gbufferModelViewInverse * vec4(fragposition1.xyz, 1.0)).xyz)*min(((1/far)+0.0007),1.0)));
+			if (roundval(length((gbufferModelViewInverse * vec4(fragposition1.xyz, 1.0)).xyz)*min(((1/far)+0.0007),1.0)) == 0) finalComposite.rgb = mix(finalComposite.rgb,mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), mix(vec3(0.3, 0.65, 1.0) * TimeDay, skyColor + fog_Color, rainStrength), 0.3), 0.5);
+			if (roundval(length((gbufferModelViewInverse * vec4(fragposition1.xyz, 1.0)).xyz)*min(((1/far)+0.0007),1.0)) == 1) finalComposite.rgb = mix(finalComposite.rgb,mix(drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition1.xyz), vec3(0.3, 0.65, 1.0) * 0.3 * max(0.45, TimeDay), 0.6), 0.5);
+		}
+		if(isEyeInWater == 0) finalComposite.rgb = drawWeatherFXFog(finalComposite.rgb, fog_Color, fragposition0.xyz);
+#else
+	if (stainedGlass || ice) finalComposite.rgb = mix(finalComposite.rgb,texture2D(texture,texcoord.st).rgb,0.5);
+	if (isEyeInWater == 1) finalComposite.rgb = mix(finalComposite.rgb, vec3(0.3, 0.65, 1.0) * 0.3, 0.5);
 #endif
 
-  vec3 finalCompositeNormal = texture2D(gcolor, texcoord.st).rgb;
+  vec3 finalCompositeNormal = texture2D(normal, texcoord.st).rgb;
   vec3 finalCompositeDepth = texture2D(gcolor, texcoord.st).rgb;
 
   gl_FragData[0] = vec4(finalComposite, 1.0);

@@ -5,14 +5,10 @@ varying vec2 texcoord2;
 
 varying float weatherRatio;
 
-uniform int worldTime;
-
 uniform float rainStrength;
 uniform float frameTimeCounter;
 
 uniform sampler2D noisetex;
-
-uniform mat4 gbufferProjection;
 
 float getWeatherRatio() {
 

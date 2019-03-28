@@ -10,11 +10,8 @@ uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
 uniform float frameTimeCounter;
 uniform vec3 cameraPosition;
-uniform float rainStrength;
 
 void main() {
-	//gl_Position = ftransform();
-	//gl_Position.z = 0.0f;
 	
 	vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
 	
@@ -27,8 +24,7 @@ void main() {
 	
 	gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 	
-	color = gl_Color * 0.65;
-	
+	color = gl_Color;
 	texcoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
 
 	lmcoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
